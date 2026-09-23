@@ -1,5 +1,6 @@
 package com.evcharging.userservice.dto;
 
+import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.AllArgsConstructor;
 import lombok.Data;
 import lombok.NoArgsConstructor;
@@ -22,6 +23,9 @@ public class UserDTO {
     private String email;
     @NotBlank(message = "Phone number is required")
     private String phoneNumber;
+    /** Only used on registration; validated in UserService, not here, since this DTO is reused for updates. */
+    @JsonProperty(access = JsonProperty.Access.WRITE_ONLY)
+    private String password;
     private String address;
     private String city;
     private String state;

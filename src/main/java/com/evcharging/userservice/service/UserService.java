@@ -4,6 +4,7 @@ import com.evcharging.userservice.dto.UserDTO;
 import com.evcharging.userservice.entity.User;
 import com.evcharging.userservice.repository.UserRepository;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -17,9 +18,18 @@ public class UserService {
     @Autowired
     private UserRepository userRepository;
 
+    @Autowired
+    private PasswordEncoder passwordEncoder;
+
     public UserDTO registerUser(UserDTO userDTO) {
         if (userRepository.findByEmail(userDTO.getEmail()).isPresent()) {
             throw new RuntimeException("User with email already exists");
+        }
+        if (userDTO.getPassword() == null || userDTO.getPassword().isBlank()) {
+            throw new RuntimeException("Password is required");
+        }
+        if (userDTO.getPassword().length() < 8) {
+            throw new RuntimeException("Password must be at least 8 characters");
         }
 
         User user = new User();
@@ -27,6 +37,7 @@ public class UserService {
         user.setLastName(userDTO.getLastName());
         user.setEmail(userDTO.getEmail());
         user.setPhoneNumber(userDTO.getPhoneNumber());
+        user.setPasswordHash(passwordEncoder.encode(userDTO.getPassword()));
         user.setAddress(userDTO.getAddress());
         user.setCity(userDTO.getCity());
         user.setState(userDTO.getState());
@@ -37,6 +48,20 @@ public class UserService {
 
         User savedUser = userRepository.save(user);
         return convertToDTO(savedUser);
+    }
+
+    /** Throws the same generic error for "no such account" and "wrong password" to avoid account enumeration. */
+    public UserDTO login(String email, String rawPassword) {
+        User user = userRepository.findByEmail(email)
+                .orElseThrow(() -> new RuntimeException("Invalid email or password"));
+
+        if (user.getPasswordHash() == null || !passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+            throw new RuntimeException("Invalid email or password");
+        }
+        if (!Boolean.TRUE.equals(user.getIsActive())) {
+            throw new RuntimeException("This account has been deactivated");
+        }
+        return convertToDTO(user);
     }
 
     public UserDTO registerOAuthUser(String email, String firstName, String lastName,

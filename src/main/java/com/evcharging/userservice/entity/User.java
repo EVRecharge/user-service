@@ -67,6 +67,10 @@ public class User {
     @Column(name = "oauth_id")
     private String oauthId;
 
+    /** Null for accounts created via OAuth only. BCrypt hash, never the raw password. */
+    @Column(name = "password_hash")
+    private String passwordHash;
+
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 

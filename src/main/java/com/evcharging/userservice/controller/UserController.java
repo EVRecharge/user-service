@@ -1,5 +1,6 @@
 package com.evcharging.userservice.controller;
 
+import com.evcharging.userservice.dto.LoginRequest;
 import com.evcharging.userservice.dto.UserDTO;
 import com.evcharging.userservice.security.JwtTokenProvider;
 import com.evcharging.userservice.service.UserService;
@@ -28,15 +29,37 @@ public class UserController {
         try {
             UserDTO registeredUser = userService.registerUser(userDTO);
             String token = jwtTokenProvider.generateToken(registeredUser.getEmail(), registeredUser.getUserId());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(registeredUser.getEmail(), registeredUser.getUserId());
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "User registered successfully");
             response.put("user", registeredUser);
             response.put("token", token);
+            response.put("refreshToken", refreshToken);
 
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (Exception e) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("error", e.getMessage()));
+        }
+    }
+
+    @PostMapping("/login")
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+        try {
+            UserDTO user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
+            String token = jwtTokenProvider.generateToken(user.getEmail(), user.getUserId());
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getUserId());
+
+            Map<String, Object> response = new HashMap<>();
+            response.put("message", "Login successful");
+            response.put("user", user);
+            response.put("token", token);
+            response.put("refreshToken", refreshToken);
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("error", e.getMessage()));
         }
     }
