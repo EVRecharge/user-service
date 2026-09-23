@@ -40,7 +40,7 @@ public class User {
     @Column(nullable = false, unique = true)
     private String email;
 
-    @Column(nullable = false, unique = true)
+    @Column(name = "phone_number", nullable = false, unique = true)
     private String phoneNumber;
 
     @Column(length = 500)
@@ -64,10 +64,10 @@ public class User {
     @Column
     private String oauthProvider;
 
-    @Column
+    @Column(name = "oauth_id")
     private String oauthId;
 
-    @Column(nullable = false)
+    @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;
 
     @CreationTimestamp
