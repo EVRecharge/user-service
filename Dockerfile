@@ -7,8 +7,10 @@ COPY src ./src
 RUN mvn clean package -DskipTests
 
 # Runtime stage
-FROM openjdk:11-jre-slim
+FROM eclipse-temurin:11-jre-jammy
 WORKDIR /app
+RUN apt-get update && apt-get install -y --no-install-recommends curl \
+  && rm -rf /var/lib/apt/lists/*
 
 # Create app user
 RUN groupadd -r appuser && useradd -r -g appuser appuser
@@ -23,8 +25,7 @@ USER appuser
 
 EXPOSE 8001
 
-HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-  CMD java -cp user-service.jar org.springframework.boot.loader.JarLauncher \
-  || exit 1
+HEALTHCHECK --interval=30s --timeout=10s --start-period=30s --retries=3 \
+  CMD curl -f http://localhost:8001/actuator/health || exit 1
 
 ENTRYPOINT ["java", "-jar", "user-service.jar"]
