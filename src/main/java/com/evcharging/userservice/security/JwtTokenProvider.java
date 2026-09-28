@@ -29,15 +29,17 @@ public class JwtTokenProvider {
         return Keys.hmacShaKeyFor(jwtSecret.getBytes());
     }
 
-    public String generateToken(String email, Long userId) {
+    public String generateToken(String email, Long userId, String entityType) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
+        claims.put("entityId", userId);
+        claims.put("entityType", entityType);
         return createToken(claims, email, jwtExpirationMs);
     }
 
-    public String generateRefreshToken(String email, Long userId) {
+    public String generateRefreshToken(String email, Long userId, String entityType) {
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userId);
+        claims.put("entityId", userId);
+        claims.put("entityType", entityType);
         claims.put("type", "refresh");
         return createToken(claims, email, refreshTokenExpirationMs);
     }
@@ -61,7 +63,12 @@ public class JwtTokenProvider {
 
     public Long getUserIdFromToken(String token) {
         Claims claims = getAllClaimsFromToken(token);
-        return claims.get("userId", Long.class);
+        return claims.get("entityId", Long.class);
+    }
+
+    public String getEntityTypeFromToken(String token) {
+        Claims claims = getAllClaimsFromToken(token);
+        return claims.get("entityType", String.class);
     }
 
     public Boolean validateToken(String token) {

@@ -7,6 +7,7 @@ import com.evcharging.userservice.service.UserService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.web.bind.annotation.*;
 
 import javax.validation.Valid;
@@ -15,7 +16,6 @@ import java.util.Map;
 
 @RestController
 @RequestMapping("/api/users")
-@CrossOrigin(origins = "*", maxAge = 3600)
 public class UserController {
 
     @Autowired
@@ -28,8 +28,8 @@ public class UserController {
     public ResponseEntity<?> registerUser(@Valid @RequestBody UserDTO userDTO) {
         try {
             UserDTO registeredUser = userService.registerUser(userDTO);
-            String token = jwtTokenProvider.generateToken(registeredUser.getEmail(), registeredUser.getUserId());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(registeredUser.getEmail(), registeredUser.getUserId());
+            String token = jwtTokenProvider.generateToken(registeredUser.getEmail(), registeredUser.getUserId(), "USER");
+            String refreshToken = jwtTokenProvider.generateRefreshToken(registeredUser.getEmail(), registeredUser.getUserId(), "USER");
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "User registered successfully");
@@ -48,8 +48,8 @@ public class UserController {
     public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             UserDTO user = userService.login(loginRequest.getEmail(), loginRequest.getPassword());
-            String token = jwtTokenProvider.generateToken(user.getEmail(), user.getUserId());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getUserId());
+            String token = jwtTokenProvider.generateToken(user.getEmail(), user.getUserId(), "USER");
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getUserId(), "USER");
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Login successful");
@@ -72,8 +72,8 @@ public class UserController {
                                         @RequestParam String oauthId) {
         try {
             UserDTO user = userService.registerOAuthUser(email, firstName, lastName, oauthProvider, oauthId);
-            String token = jwtTokenProvider.generateToken(user.getEmail(), user.getUserId());
-            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getUserId());
+            String token = jwtTokenProvider.generateToken(user.getEmail(), user.getUserId(), "USER");
+            String refreshToken = jwtTokenProvider.generateRefreshToken(user.getEmail(), user.getUserId(), "USER");
 
             Map<String, Object> response = new HashMap<>();
             response.put("message", "Login successful");
@@ -123,6 +123,10 @@ public class UserController {
     @PutMapping("/{userId}")
     public ResponseEntity<?> updateUser(@PathVariable Long userId,
                                         @Valid @RequestBody UserDTO userDTO) {
+        if (!isSelf(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only modify your own account"));
+        }
         try {
             UserDTO updatedUser = userService.updateUser(userId, userDTO);
             return ResponseEntity.ok(updatedUser);
@@ -134,6 +138,10 @@ public class UserController {
 
     @DeleteMapping("/{userId}")
     public ResponseEntity<?> deleteUser(@PathVariable Long userId) {
+        if (!isSelf(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN)
+                    .body(Map.of("error", "You can only delete your own account"));
+        }
         try {
             userService.deleteUser(userId);
             return ResponseEntity.ok(Map.of("message", "User deleted successfully"));
@@ -166,5 +174,16 @@ public class UserController {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                     .body(Map.of("valid", false, "error", e.getMessage()));
         }
+    }
+
+    /** True only when the caller's own JWT identifies them as this exact user (not a provider, not another user). */
+    private boolean isSelf(Long userId) {
+        var auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null || !(auth.getPrincipal() instanceof Long)) {
+            return false;
+        }
+        boolean isUserRole = auth.getAuthorities().stream()
+                .anyMatch(a -> a.getAuthority().equals("ROLE_USER"));
+        return isUserRole && userId.equals(auth.getPrincipal());
     }
 }
