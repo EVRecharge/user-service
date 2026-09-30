@@ -96,4 +96,4 @@ app:
   description: Independent User Management Microservice
   # CORS: comma-separated list of origins allowed to call this API from a browser
   cors:
-    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://evrechargeindia.com,https://www.evrechargeindia.com,http://localhost:4200}
+    allowed-origins: ${CORS_ALLOWED_ORIGINS:https://evrechargeindia.com,https://www.evrechargeindia.com,http://localhost:4200,capacitor://localhost,https://localhost}
